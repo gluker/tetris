@@ -30,6 +30,7 @@
 struct Figure{
     int dim;
     int fig[4][4];
+    int color;
 };
 typedef struct Figure figure;
 
@@ -63,42 +64,49 @@ int main()
         I.fig[1][1] = 1;
         I.fig[2][1] = 1;
         I.fig[3][1] = 1;
+        I.color = 1;
     figure O = {0};
         O.dim = 2;
         O.fig[0][0] = 1;
         O.fig[1][1] = 1;
         O.fig[0][1] = 1;
         O.fig[1][0] = 1;
+        O.color = 2;
     figure J = {0};
         J.dim = 3;
         J.fig[0][0] = 1;
         J.fig[1][0] = 1;
         J.fig[1][1] = 1;
         J.fig[1][2] = 1;
+        J.color = 3;
     figure L = {0};
         L.dim = 3;
         L.fig[2][0] = 1;
         L.fig[1][0] = 1;
         L.fig[1][1] = 1;
         L.fig[1][2] = 1;
+        L.color = 4;
     figure S = {0};
         S.dim = 3;
         S.fig[0][0] = 1;
         S.fig[1][0] = 1;
         S.fig[1][1] = 1;
         S.fig[2][1] = 1;
+        S.color = 5;
     figure Z = {0};
         Z.dim = 3;
         Z.fig[0][1] = 1;
         Z.fig[1][0] = 1;
         Z.fig[1][1] = 1;
         Z.fig[2][0] = 1;
+        Z.color = 6;
     figure T = {0};
         T.dim = 3;
         T.fig[0][1] = 1;
         T.fig[1][0] = 1;
         T.fig[1][1] = 1;
         T.fig[1][2] = 1;
+        T.color = 7;
     figure figs[] = {I,O,J,L,S,Z,T};
     int field[FIELD_H][FIELD_W] = {{0}};
 
@@ -108,6 +116,7 @@ int main()
     box(aux_win,0,0);
     nodelay(main_win,1);
     keypad(main_win, TRUE);
+    start_color();
 
     figure cf = figs[rand()%(FIG_NUM-1)];
     figure nf = figs[rand()%(FIG_NUM-1)];
@@ -235,7 +244,7 @@ void draw_field(WINDOW *wind,int field[FIELD_H][FIELD_W]){
         for(int j=0;j<FIELD_W;j++){
             delblock(wind,i,j);
             if(field[i][j])
-                putblock(wind,i,j);
+                putblock(wind,i,j,field[i][j]);
         }
     wrefresh(wind);
 }
@@ -243,13 +252,13 @@ void draw_field(WINDOW *wind,int field[FIELD_H][FIELD_W]){
 void putfig(int field[FIELD_H][FIELD_W],figure F,int y,int x){
     for(int i=0;i<F.dim;i++)
         for(int j=0;j<F.dim;j++)
-            if (F.fig[i][j]) field[y+i][x+j] = 1;
+            if (F.fig[i][j]) field[y+i][x+j] = F.color;
 }
 
 void printfig(WINDOW *wind,figure F,int y,int x){
     for(int i=0;i<F.dim;i++)
         for(int j=0;j<F.dim;j++)
-            if (F.fig[i][j]) putblock(wind,y+i,x+j);
+            if (F.fig[i][j]) putblock(wind,y+i,x+j,F.color);
     wrefresh(wind);
 }
 void unprintfig(WINDOW *wind,figure F,int y,int x){
@@ -264,14 +273,15 @@ void delfig(int field[FIELD_H][FIELD_W],figure F,int y,int x){
         for(int j=0;j<F.dim;j++)
             if (F.fig[i][j]) field[y+i][x+j] = 0;
 }
-void putblock(WINDOW *wind, int y,int x){
-    //move(y+1,x*2+1);
+void putblock(WINDOW *wind, int y,int x,int color){
+    init_pair(color,color,color);
     wattron(wind,A_REVERSE);
+    wattron(wind,COLOR_PAIR(color));
     mvwprintw(wind,y+1,x*2+1,"  ");
+    wattroff(wind,COLOR_PAIR(color));
     wattroff(wind,A_REVERSE);
 }
 void delblock(WINDOW *wind,int y,int x){
-    //move(y+1,x*2+1);
     mvwprintw(wind,y+1,x*2+1,"  ");
 }
 

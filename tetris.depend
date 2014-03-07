@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1393834393 source:/home/gluker/dvlp/tetris/main.c
+1394212893 source:/home/gluker/dvlp/tetris/main.c
 	<ncurses.h>
 	<time.h>
 	<stdlib.h>
