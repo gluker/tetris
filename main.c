@@ -1,11 +1,9 @@
 #include <ncurses.h>
 #include <time.h>
 #include <stdlib.h>
+#include <math.h>
 
-//TODO: speeding up
-//TODO: colors
 //TODO: records
-
 
 #define NF_X        1
 #define NF_Y        0
@@ -18,9 +16,11 @@
 #define MAINWIN_H   22
 #define MAINWIN_X   15
 #define MAINWIN_Y   0
-#define AUXWIN_W    12
-#define AUXWIN_H    6
-
+#define AUXWIN_W    13
+#define AUXWIN_H    8
+#define SCORE_LINE  5
+#define SPEED_FRACTION   0.8
+#define SPEED_PERIOD     2
 #define R_L         0
 #define R_R         1
 #define M_L         0
@@ -56,7 +56,6 @@ int main()
     nodelay(stdscr,1);
     keypad(stdscr, TRUE);
     srand(time(NULL));
-
 
     figure I = {0};
         I.dim = 4;
@@ -111,8 +110,8 @@ int main()
     int field[FIELD_H][FIELD_W] = {{0}};
 
     WINDOW *main_win = newwin(MAINWIN_H,MAINWIN_W,MAINWIN_Y,MAINWIN_X);
-	box(main_win, 0 , 0);
-    WINDOW *aux_win = newwin(AUXWIN_H,AUXWIN_W, MAINWIN_Y,MAINWIN_X+MAINWIN_W);
+    box(main_win,0,0);
+    WINDOW *aux_win = newwin(AUXWIN_H,AUXWIN_W,MAINWIN_Y,MAINWIN_X+MAINWIN_W);
     box(aux_win,0,0);
     nodelay(main_win,1);
     keypad(main_win, TRUE);
@@ -121,12 +120,13 @@ int main()
     figure cf = figs[rand()%(FIG_NUM-1)];
     figure nf = figs[rand()%(FIG_NUM-1)];
     printfig(aux_win,nf,NF_Y,NF_X);
-    int score = 0;
+    int score=0,oldscore=1;
     int x=3,y=-1;
     int ch;
     int game_state = 1;
     double delay = DELAY_TIME;
-
+    mvwprintw(aux_win,SCORE_LINE,1,"Score: %d",score);
+    wrefresh(aux_win);
     while(game_state){
 
         if (!move_fig(field,cf,&x,&y,M_D)){
@@ -138,14 +138,16 @@ int main()
             nf = figs[rand()%(FIG_NUM)];
             printfig(aux_win,nf,NF_Y,NF_X);
             fill_test(field,&score);
-          //  mvprintw(9,23,"Score: %d",score);
-            //delay = 1/(score+1);
-          //  mvprintw(10,23,"Delay: %f",delay);
+            mvwprintw(aux_win,SCORE_LINE,1,"Score: %d",score);
+            if(score>=(SPEED_PERIOD*oldscore)){
+                oldscore = score;
+                delay *=SPEED_FRACTION;
+            }
+         // mvwprintw(aux_win,6,1,"Delay: %f",delay);
+            wrefresh(aux_win);
         }
-
         clock_t start = clock();
         clock_t finish = start+(delay*CLOCKS_PER_SEC);
-
         while(clock()<finish){
             ch=wgetch(main_win);
             switch (ch){
@@ -154,33 +156,31 @@ int main()
                 case KEY_RIGHT:move_fig(field,cf,&x,&y,M_R); break;
                 case KEY_DOWN: move_fig(field,cf,&x,&y,M_D); break;
                 case KEY_UP:   rotate_fig(field,&cf,&x,&y,R_R); break;
+                case 'P':
+                case 'p': nodelay(main_win,0); wgetch(main_win);
+                    nodelay(main_win,1); break;
                 default:
                     break;
             }
-
             draw_field(main_win,field);
-         //   wrefresh(main_win);
         }
-
         draw_field(main_win,field);
-
     }
-
     endwin();
     return 0;
 }
+
 void rotate_fig(int field[FIELD_H][FIELD_W],figure *F,int* x,int* y,int dir){
     figure tempf = *F;
     delfig(field,*F,*y,*x);
     rotateaux(&tempf,dir);
-
     if (freeplace(field,tempf,*y,*x)){
         rotateaux(F,dir);
         putfig(field,*F,*y,*x);
     }
-
     putfig(field,*F,*y,*x);
 }
+
 void rotateaux(figure* F,int dir){
     int tempf[F->dim][F->dim];
     for(int i=0;i<F->dim;i++)
@@ -191,18 +191,19 @@ void rotateaux(figure* F,int dir){
          for(int j=0;j<F->dim;j++)
             F->fig[i][j] = (dir?tempf[F->dim-j-1][i]:tempf[j][F->dim-i-1]);
 }
+
 int freeplace(int field[FIELD_H][FIELD_W],figure F,int y,int x){
     for(int i=0;i<F.dim;i++)
         for(int j=0;j<F.dim;j++){
             if ((F.fig[i][j]) && (field[y+i][x+j]))
                 return 0;
-            if ((F.fig[i][j]) && ((y+i>=FIELD_H) || (x+j>=FIELD_W) ||(x+j<0) ))
+            if ((F.fig[i][j]) && ((y+i>=FIELD_H)||(x+j>=FIELD_W)||(x+j<0) ))
                 return 0;
         }
     return 1;
 }
-int move_fig(int field[FIELD_H][FIELD_W],figure F,int* x,int* y,int dir){
 
+int move_fig(int field[FIELD_H][FIELD_W],figure F,int* x,int* y,int dir){
     int nx=*x,ny=*y;
     switch(dir){
         case M_L:nx--;break;
@@ -220,6 +221,7 @@ int move_fig(int field[FIELD_H][FIELD_W],figure F,int* x,int* y,int dir){
     putfig(field,F,*y,*x);
     return 0;
 }
+
 int testline(int line[FIELD_W]){
     for(int i=0;i<FIELD_W;i++)
         if(!line[i]) return 0;
@@ -229,7 +231,6 @@ void delline(int field[FIELD_H][FIELD_W],int line){
     for(int i=0;i<FIELD_W;i++)
         for(int j=line;j>0;j--)
             field[j][i] = field[j-1][i];
-
 }
 void fill_test(int field[FIELD_H][FIELD_W],int* score){
     for(int i=0;i<FIELD_H;i++){
@@ -275,11 +276,9 @@ void delfig(int field[FIELD_H][FIELD_W],figure F,int y,int x){
 }
 void putblock(WINDOW *wind, int y,int x,int color){
     init_pair(color,color,color);
-    wattron(wind,A_REVERSE);
     wattron(wind,COLOR_PAIR(color));
     mvwprintw(wind,y+1,x*2+1,"  ");
     wattroff(wind,COLOR_PAIR(color));
-    wattroff(wind,A_REVERSE);
 }
 void delblock(WINDOW *wind,int y,int x){
     mvwprintw(wind,y+1,x*2+1,"  ");
