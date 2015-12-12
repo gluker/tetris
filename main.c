@@ -132,7 +132,7 @@ int main()
         if (!move_fig(field,cf,&x,&y,M_D)){
             if(y<0) game_state = 0;
             x=3;
-            y=-1;
+            y=0;
             cf = nf;
             unprintfig(aux_win,nf,NF_Y,NF_X);
             nf = figs[rand()%(FIG_NUM)];
